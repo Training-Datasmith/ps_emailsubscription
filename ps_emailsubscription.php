@@ -235,7 +235,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
                 Db::getInstance()->execute($sql);
             } else {
                 $c = new Customer((int) $id);
-                $c->newsletter = (bool) !$c->newsletter;
+                $c->newsletter = !$c->newsletter;
                 $c->update();
             }
 
@@ -435,27 +435,25 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         if ($hookError !== null) {
             return $this->error = $hookError;
         }
-
         if (empty($_POST['email']) || !Validate::isEmail($_POST['email'])) {
             return $this->error = $this->trans('Invalid email address.', [], 'Shop.Notifications.Error');
-        } elseif ($_POST['action'] == static::NEWSLETTER_UNSUBSCRIPTION) {
+        }
+        if ($_POST['action'] == static::NEWSLETTER_UNSUBSCRIPTION) {
             $register_status = $this->isNewsletterRegistered($_POST['email']);
-
             if ($register_status < 1) {
                 return $this->error = $this->trans('This email address is not registered.', [], 'Modules.Emailsubscription.Shop');
             }
-
             if (!$this->unregister($_POST['email'], $register_status)) {
                 return $this->error = $this->trans('An error occurred while attempting to unsubscribe.', [], 'Modules.Emailsubscription.Shop');
             }
-
             return $this->valid = $this->trans('Unsubscription successful.', [], 'Modules.Emailsubscription.Shop');
-        } elseif ($_POST['action'] == static::NEWSLETTER_SUBSCRIPTION) {
+        }
+
+        if ($_POST['action'] == static::NEWSLETTER_SUBSCRIPTION) {
             $register_status = $this->isNewsletterRegistered($_POST['email']);
             if ($register_status > 0) {
                 return $this->error = $this->trans('This email address is already registered.', [], 'Modules.Emailsubscription.Shop');
             }
-
             $email = pSQL($_POST['email']);
             if (!$this->isRegistered($register_status)) {
                 if (Configuration::get('NW_VERIFICATION_EMAIL')) {
@@ -471,20 +469,17 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
                     $this->sendVerificationEmail($email, $token);
 
                     return $this->valid = $this->trans('A verification email has been sent. Please check your inbox.', [], 'Modules.Emailsubscription.Shop');
+                }
+                if ($this->register($email, $register_status)) {
+                    $this->valid = $this->trans('You have successfully subscribed to this newsletter.', [], 'Modules.Emailsubscription.Shop');
                 } else {
-                    if ($this->register($email, $register_status)) {
-                        $this->valid = $this->trans('You have successfully subscribed to this newsletter.', [], 'Modules.Emailsubscription.Shop');
-                    } else {
-                        return $this->error = $this->trans('An error occurred during the subscription process.', [], 'Modules.Emailsubscription.Shop');
-                    }
-
-                    if ($code = Configuration::get('NW_VOUCHER_CODE')) {
-                        $this->sendVoucher($email, $code);
-                    }
-
-                    if (Configuration::get('NW_CONFIRMATION_EMAIL')) {
-                        $this->sendConfirmationEmail($email);
-                    }
+                    return $this->error = $this->trans('An error occurred during the subscription process.', [], 'Modules.Emailsubscription.Shop');
+                }
+                if ($code = Configuration::get('NW_VOUCHER_CODE')) {
+                    $this->sendVoucher($email, $code);
+                }
+                if (Configuration::get('NW_CONFIRMATION_EMAIL')) {
+                    $this->sendConfirmationEmail($email);
                 }
             }
         }
@@ -544,15 +539,13 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
 
         $non_customers = Db::getInstance()->executeS($dbquery->build());
 
-        $subscribers = array_merge($customers, $non_customers);
-
-        return $subscribers;
+        return array_merge($customers, $non_customers);
     }
 
     public function paginateSubscribers($subscribers, $page = 1, $pagination = 50)
     {
         if (count($subscribers) > $pagination) {
-            $subscribers = array_slice($subscribers, $pagination * ($page - 1), $pagination);
+            return array_slice($subscribers, $pagination * ($page - 1), $pagination);
         }
 
         return $subscribers;
@@ -776,7 +769,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
      *
      * @note the email has been verified and might not yet been registered. Called by AuthController::processCustomerNewsletter
      */
-    public function confirmSubscription($email)
+    public function confirmSubscription($email): void
     {
         if ($email) {
             if ($discount = Configuration::get('NW_VOUCHER_CODE')) {
@@ -819,7 +812,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
             null,
             null,
             null,
-            dirname(__FILE__) . '/mails/',
+            __DIR__ . '/mails/',
             false,
             $this->context->shop->id
         );
@@ -852,7 +845,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
             null,
             null,
             null,
-            dirname(__FILE__) . '/mails/',
+            __DIR__ . '/mails/',
             false,
             $this->context->shop->id
         );
@@ -893,7 +886,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
             null,
             null,
             null,
-            dirname(__FILE__) . '/mails/',
+            __DIR__ . '/mails/',
             false,
             $this->context->shop->id
         );
@@ -941,7 +934,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         return $variables;
     }
 
-    public function hookActionFrontControllerSetMedia()
+    public function hookActionFrontControllerSetMedia(): void
     {
         Media::addJsDef([
             'psemailsubscription_subscription' => $this->context->link->getModuleLink($this->name, 'subscription', [], true),
@@ -988,7 +981,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         return true;
     }
 
-    public function hookActionObjectCustomerUpdateBefore($params)
+    public function hookActionObjectCustomerUpdateBefore($params): void
     {
         $customer = new Customer($params['object']->id);
         $this->_origin_newsletter = (int) $customer->newsletter;
@@ -1119,7 +1112,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
 
         $lang = new Language((int) Configuration::get('PS_LANG_DEFAULT'));
         $helper->default_form_language = $lang->id;
-        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
+        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ?: 0;
         $helper->identifier = $this->identifier;
         $helper->submit_action = 'submitUpdate';
         $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false, [], ['configure' => $this->name, 'tab_module' => $this->tab, 'module_name' => $this->name]);
@@ -1220,7 +1213,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
 
         $lang = new Language((int) Configuration::get('PS_LANG_DEFAULT'));
         $helper->default_form_language = $lang->id;
-        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
+        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ?: 0;
         $helper->identifier = $this->identifier;
         $helper->submit_action = 'btnSubmit';
         $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false, [], ['configure' => $this->name, 'tab_module' => $this->tab, 'module_name' => $this->name]);
@@ -1297,7 +1290,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         ];
     }
 
-    public function export_csv()
+    public function export_csv(): void
     {
         if ($this->context === null) {
             $this->context = Context::getContext();
@@ -1317,7 +1310,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         if ($result) {
             if (!$nb = count($result)) {
                 $this->_html .= $this->displayError($this->trans('No customers found with these filters!', [], 'Modules.Emailsubscription.Admin'));
-            } elseif ($fd = @fopen(dirname(__FILE__) . '/' . strval(preg_replace('#\.{2,}#', '.', Tools::getValue('action'))) . '_' . $this->file, 'w')) {
+            } elseif ($fd = @fopen(__DIR__ . '/' . strval(preg_replace('#\.{2,}#', '.', Tools::getValue('action'))) . '_' . $this->file, 'w')) {
                 $header = ['id', 'shop_name', 'gender', 'lastname', 'firstname', 'email', 'subscribed', 'subscribed_on', 'iso_language'];
                 $array_to_export = array_merge([$header], $result);
 
@@ -1339,14 +1332,14 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
                     '</li>
                 </ol>');
             } else {
-                $this->_html .= $this->displayError($this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . dirname(__FILE__) . '/' . strval(Tools::getValue('action')) . '_' . $this->file . ' !');
+                $this->_html .= $this->displayError($this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . __DIR__ . '/' . strval(Tools::getValue('action')) . '_' . $this->file . ' !');
             }
         } else {
             $this->_html .= $this->displayError($this->trans('No result found!', [], 'Modules.Emailsubscription.Admin'));
         }
     }
 
-    private function getCustomers()
+    private function getCustomers(): array
     {
         $id_shop = false;
 
@@ -1405,21 +1398,19 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
             $non_customers = Db::getInstance()->executeS($dbquery->build());
         }
 
-        $subscribers = array_merge($customers, $non_customers);
-
-        return $subscribers;
+        return array_merge($customers, $non_customers);
     }
 
-    private function myFputCsv($fd, $array)
+    private function myFputCsv($fd, $array): void
     {
         $line = implode(';', $array);
         $line .= "\n";
         if (!fwrite($fd, $line, 4096)) {
-            $this->post_errors[] = $this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . dirname(__FILE__) . '/' . $this->file . ' !';
+            $this->post_errors[] = $this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . __DIR__ . '/' . $this->file . ' !';
         }
     }
 
-    private function getConditionFixtures($lang)
+    private function getConditionFixtures(array $lang)
     {
         $locale = $lang['locale'];
 

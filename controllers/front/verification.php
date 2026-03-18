@@ -36,7 +36,7 @@ class Ps_EmailsubscriptionVerificationModuleFrontController extends ModuleFrontC
     /**
      * @see FrontController::postProcess()
      */
-    public function postProcess()
+    public function postProcess(): void
     {
         $this->message = $this->module->confirmEmail(Tools::getValue('token'));
     }
@@ -44,7 +44,7 @@ class Ps_EmailsubscriptionVerificationModuleFrontController extends ModuleFrontC
     /**
      * @see FrontController::initContent()
      */
-    public function initContent()
+    public function initContent(): void
     {
         parent::initContent();
 

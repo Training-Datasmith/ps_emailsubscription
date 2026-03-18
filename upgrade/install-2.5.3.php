@@ -27,7 +27,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-function upgrade_module_2_5_3($object)
+function upgrade_module_2_5_3($object): bool
 {
     return $object->registerHook('actionCustomerAccountUpdate')
         && $object->registerHook('actionObjectCustomerUpdateBefore');

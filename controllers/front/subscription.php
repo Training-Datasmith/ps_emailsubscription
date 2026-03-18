@@ -36,7 +36,7 @@ class Ps_EmailsubscriptionSubscriptionModuleFrontController extends ModuleFrontC
     /**
      * @see FrontController::postProcess()
      */
-    public function postProcess()
+    public function postProcess(): void
     {
         $this->variables['value'] = Tools::getValue('email', '');
         $this->variables['msg'] = '';
@@ -63,7 +63,7 @@ class Ps_EmailsubscriptionSubscriptionModuleFrontController extends ModuleFrontC
     /**
      * @see FrontController::initContent()
      */
-    public function initContent()
+    public function initContent(): void
     {
         parent::initContent();
 
