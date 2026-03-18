@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * 2007-2020 PrestaShop.
  *
@@ -34,22 +36,22 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
     /**
      * @var string Name of the module running on PS 1.6.x. Used for data migration.
      */
-    const PS_16_EQUIVALENT_MODULE = 'blocknewsletter';
+    public const PS_16_EQUIVALENT_MODULE = 'blocknewsletter';
 
-    const GUEST_NOT_REGISTERED = -1;
-    const CUSTOMER_NOT_REGISTERED = 0;
-    const GUEST_REGISTERED = 1;
-    const CUSTOMER_REGISTERED = 2;
+    public const GUEST_NOT_REGISTERED = -1;
+    public const CUSTOMER_NOT_REGISTERED = 0;
+    public const GUEST_REGISTERED = 1;
+    public const CUSTOMER_REGISTERED = 2;
 
-    const NEWSLETTER_SUBSCRIPTION = 0;
-    const NEWSLETTER_UNSUBSCRIPTION = 1;
+    public const NEWSLETTER_SUBSCRIPTION = 0;
+    public const NEWSLETTER_UNSUBSCRIPTION = 1;
 
-    const LEGAL_PRIVACY = 'LEGAL_PRIVACY';
+    public const LEGAL_PRIVACY = 'LEGAL_PRIVACY';
 
     protected $_origin_newsletter;
 
-    const TPL_COLUMN = 'ps_emailsubscription-column.tpl';
-    const TPL_DEFAULT = 'ps_emailsubscription.tpl';
+    public const TPL_COLUMN = 'ps_emailsubscription-column.tpl';
+    public const TPL_DEFAULT = 'ps_emailsubscription.tpl';
 
     /**
      * @var bool|string
@@ -862,7 +864,9 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
     protected function sendVerificationEmail($email, $token)
     {
         $verif_url = Context::getContext()->link->getModuleLink(
-            'ps_emailsubscription', 'verification', [
+            'ps_emailsubscription',
+            'verification',
+            [
                 'token' => $token,
             ]
         );
@@ -1273,7 +1277,9 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         foreach ($languages as $lang) {
             $conditions[$lang['id_lang']] = Tools::getValue(
                 'NW_CONDITIONS_' . $lang['id_lang'],
-                Configuration::get('NW_CONDITIONS', $lang['id_lang']
+                Configuration::get(
+                    'NW_CONDITIONS',
+                    $lang['id_lang']
                 )
             );
         }
@@ -1330,7 +1336,8 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
                     <li style="color: red;">' .
                     $this->trans('WARNING: When opening this .csv file with Excel, choose UTF-8 encoding to avoid strange characters.', [], 'Modules.Emailsubscription.Admin') .
                     '</li>
-                </ol>');
+                </ol>'
+                );
             } else {
                 $this->_html .= $this->displayError($this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . __DIR__ . '/' . strval(Tools::getValue('action')) . '_' . $this->file . ' !');
             }
