@@ -668,12 +668,22 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
      */
     protected function getGuestEmailByToken($token)
     {
-        $sql = 'SELECT `email`
+        $salt = (string) Configuration::get('NW_SALT');
+        $sql = 'SELECT `email`, `newsletter_date_add`
                 FROM `' . _DB_PREFIX_ . 'emailsubscription`
-                WHERE MD5(CONCAT( `email` , `newsletter_date_add`, \'' . pSQL(Configuration::get('NW_SALT')) . '\')) = \'' . pSQL($token) . '\'
-                AND `active` = 0';
+                WHERE `active` = 0';
+        $rows = Db::getInstance()->executeS($sql);
+        if (!$rows) {
+            return '';
+        }
+        foreach ($rows as $row) {
+            $expected = hash_hmac('sha256', $row['email'] . $row['newsletter_date_add'], $salt);
+            if (hash_equals($expected, $token)) {
+                return $row['email'];
+            }
+        }
 
-        return Db::getInstance()->getValue($sql);
+        return '';
     }
 
     /**
@@ -685,12 +695,22 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
      */
     protected function getUserEmailByToken($token)
     {
-        $sql = 'SELECT `email`
+        $salt = (string) Configuration::get('NW_SALT');
+        $sql = 'SELECT `email`, `date_add`
                 FROM `' . _DB_PREFIX_ . 'customer`
-                WHERE MD5(CONCAT( `email` , `date_add`, \'' . pSQL(Configuration::get('NW_SALT')) . '\')) = \'' . pSQL($token) . '\'
-                AND `newsletter` = 0';
+                WHERE `newsletter` = 0';
+        $rows = Db::getInstance()->executeS($sql);
+        if (!$rows) {
+            return '';
+        }
+        foreach ($rows as $row) {
+            $expected = hash_hmac('sha256', $row['email'] . $row['date_add'], $salt);
+            if (hash_equals($expected, $token)) {
+                return $row['email'];
+            }
+        }
 
-        return Db::getInstance()->getValue($sql);
+        return '';
     }
 
     /**
@@ -701,21 +721,30 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
      */
     protected function getToken($email, $register_status)
     {
+        $salt = (string) Configuration::get('NW_SALT');
         if (in_array($register_status, [self::GUEST_NOT_REGISTERED, self::GUEST_REGISTERED])) {
-            $sql = 'SELECT MD5(CONCAT( `email` , `newsletter_date_add`, \'' . pSQL(Configuration::get('NW_SALT')) . '\')) as token
+            $sql = 'SELECT `email`, `newsletter_date_add`
                     FROM `' . _DB_PREFIX_ . 'emailsubscription`
                     WHERE `active` = 0
                     AND `email` = \'' . pSQL($email) . '\'';
+            $row = Db::getInstance()->getRow($sql);
+            if (!$row) {
+                return '';
+            }
 
-            return Db::getInstance()->getValue($sql);
+            return hash_hmac('sha256', $row['email'] . $row['newsletter_date_add'], $salt);
         }
         if ($register_status == self::CUSTOMER_NOT_REGISTERED) {
-            $sql = 'SELECT MD5(CONCAT( `email` , `date_add`, \'' . pSQL(Configuration::get('NW_SALT')) . '\' )) as token
+            $sql = 'SELECT `email`, `date_add`
                     FROM `' . _DB_PREFIX_ . 'customer`
                     WHERE `newsletter` = 0
                     AND `email` = \'' . pSQL($email) . '\'';
+            $row = Db::getInstance()->getRow($sql);
+            if (!$row) {
+                return '';
+            }
 
-            return Db::getInstance()->getValue($sql);
+            return hash_hmac('sha256', $row['email'] . $row['date_add'], $salt);
         }
 
         return '';
@@ -1316,7 +1345,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         if ($result) {
             if (!$nb = count($result)) {
                 $this->_html .= $this->displayError($this->trans('No customers found with these filters!', [], 'Modules.Emailsubscription.Admin'));
-            } elseif ($fd = @fopen(__DIR__ . '/' . strval(preg_replace('#\.{2,}#', '.', Tools::getValue('action'))) . '_' . $this->file, 'w')) {
+            } elseif ($fd = @fopen(__DIR__ . '/' . basename(strval(Tools::getValue('action'))) . '_' . $this->file, 'w')) {
                 $header = ['id', 'shop_name', 'gender', 'lastname', 'firstname', 'email', 'subscribed', 'subscribed_on', 'iso_language'];
                 $array_to_export = array_merge([$header], $result);
 
