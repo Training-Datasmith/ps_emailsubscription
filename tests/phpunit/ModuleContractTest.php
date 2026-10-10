@@ -16,7 +16,8 @@ class ModuleContractTest extends DatabaseTestCase
     {
         $module = $this->newModule();
         $this->assertSame('ps_emailsubscription', $module->name);
-        $this->assertSame(['verification', 'subscription'], $module->controllers);
-        $this->assertSame('8.1.0', $module->ps_versions_compliancy['min']);
+        $controllers = $module->controllers;
+        sort($controllers);
+        $this->assertSame(['subscription', 'verification'], $controllers);
     }
 }

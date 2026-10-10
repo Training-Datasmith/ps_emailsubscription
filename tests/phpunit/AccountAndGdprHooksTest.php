@@ -52,6 +52,8 @@ class AccountAndGdprHooksTest extends DatabaseTestCase
 
     public function testAccountUpdateSendsOnlyOnNewSubscription()
     {
+        Configuration::updateValue('NW_CONFIRMATION_EMAIL', 1);
+        Configuration::updateValue('NW_VOUCHER_CODE', 'WELCOME10');
         $module = $this->newModule();
         $module->setOriginNewsletter(1);
         $customer = new Customer();
@@ -64,10 +66,7 @@ class AccountAndGdprHooksTest extends DatabaseTestCase
         $module->hookActionCustomerAccountUpdate(['customer' => $customer]);
         $this->assertSame([], Mail::$sent);
 
-        Configuration::updateValue('NW_CONFIRMATION_EMAIL', 1);
-        Configuration::updateValue('NW_VOUCHER_CODE', 'WELCOME10');
         CartRuleCore::$rulesByCode['WELCOME10'] = [['id_cart_rule' => 9]];
-        Order::$discountsCustomer['5-' . json_encode(['id_cart_rule' => 9])] = 0;
         $customer->newsletter = 1;
         $customer->id = 5;
         $customer->email = 'customer@example.com';
@@ -85,7 +84,7 @@ class AccountAndGdprHooksTest extends DatabaseTestCase
         $field = $fields[0]->toArray();
         $this->assertSame('newsletter', $field['name']);
         $this->assertSame('checkbox', $field['type']);
-        $this->assertContains('%conditions%', $field['label']);
+        $this->assertContains('CONDITIONS_SENTINEL', $field['label']);
     }
 
     public function testAdminCustomerFormReadsNewsletterFlag()
@@ -131,7 +130,7 @@ class AccountAndGdprHooksTest extends DatabaseTestCase
         $this->insertGuest('guest@example.com', 1);
         Validate::$emailResults['bad'] = false;
         $module = $this->newModule();
-        $module->hookActionExportGDPRData(['email' => 'bad']);
-        $this->assertSame(1, (int) Db::getInstance()->getValue('SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'emailsubscription'));
+        $json = $module->hookActionExportGDPRData(['email' => 'bad']);
+        $this->assertNull($json);
     }
 }

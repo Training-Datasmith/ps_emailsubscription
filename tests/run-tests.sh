@@ -18,10 +18,8 @@ ensure_docker_bundle() {
     exit 1
   fi
   echo "${DOCKER_SHA256}  ${DOCKER_TGZ}" | sha256sum -c -
-  if [ ! -x "$DOCKER_BIN" ]; then
-    mkdir -p "$DOCKER_EXTRACT_ROOT"
-    tar -xzf "$DOCKER_TGZ" -C "$DOCKER_EXTRACT_ROOT"
-  fi
+  mkdir -p "$DOCKER_EXTRACT_ROOT"
+  tar -xzf "$DOCKER_TGZ" -C "$DOCKER_EXTRACT_ROOT"
   if [ ! -x "$DOCKER_BIN" ]; then
     echo "Docker CLI not found at $DOCKER_BIN after extracting $DOCKER_TGZ" >&2
     exit 1
@@ -41,7 +39,7 @@ ensure_docker() {
       >/tmp/dockerd.log 2>&1 &
     for _ in $(seq 1 30); do
       if "$DOCKER_BIN" info >/dev/null 2>&1; then
-        sudo chmod 666 /tmp/docker.sock 2>/dev/null || true
+        sudo chown "$(id -u):$(id -g)" /tmp/docker.sock 2>/dev/null || true
         return 0
       fi
       sleep 1
@@ -69,7 +67,7 @@ if [ ! -f /tmp/phpunit-cache/phpunit-7.5.20.phar ]; then
   curl -fsSL -o /tmp/phpunit-cache/sb.asc https://sebastian-bergmann.de/gpg.asc
 fi
 
-"$DOCKER_BIN" network inspect "$NETWORK" >/dev/null 2>&1 || "$DOCKER_BIN" network create "$NETWORK" >/dev/null
+"$DOCKER_BIN" network inspect "$NETWORK" >/dev/null 2>&1 || "$DOCKER_BIN" network create --internal "$NETWORK" >/dev/null
 "$DOCKER_BIN" rm -f "$DB_CONTAINER" >/dev/null 2>&1 || true
 "$DOCKER_BIN" run -d --name "$DB_CONTAINER" --network "$NETWORK" \
   -e MARIADB_ROOT_PASSWORD=ps_emailsub_test \
@@ -102,3 +100,7 @@ COMMIT_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   --entrypoint /bin/sh \
   "$PHP_IMAGE" \
   /work/tests/run-tests-inside.sh
+
+if [ "${RUN_MUTATIONS:-0}" = "1" ]; then
+  git -C "$ROOT" diff --exit-code -- ps_emailsubscription.php
+fi

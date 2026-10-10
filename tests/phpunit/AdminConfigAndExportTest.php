@@ -4,13 +4,14 @@ class AdminConfigAndExportTest extends DatabaseTestCase
 {
     public function testGetConfigFieldsValuesPrefersPostedValues()
     {
+        Configuration::updateValue('NW_VERIFICATION_EMAIL', 1);
         $module = $this->newModule();
         $values = $module->getConfigFieldsValues();
-        $this->assertSame(0, (int) $values['NW_VERIFICATION_EMAIL']);
+        $this->assertSame(1, (int) $values['NW_VERIFICATION_EMAIL']);
         $this->assertSame('CONDITIONS_SENTINEL', $values['NW_CONDITIONS'][1]);
-        $_POST['NW_VERIFICATION_EMAIL'] = '1';
+        $_POST['NW_VERIFICATION_EMAIL'] = '0';
         $values = $module->getConfigFieldsValues();
-        $this->assertSame('1', $values['NW_VERIFICATION_EMAIL']);
+        $this->assertSame('0', $values['NW_VERIFICATION_EMAIL']);
     }
 
     public function testSubmitUpdateSavesAValidVoucher()
@@ -90,8 +91,10 @@ class AdminConfigAndExportTest extends DatabaseTestCase
         $module->_helperlist->table = 'merged';
         $html = $module->displayViewCustomerLink('token', 0);
         $this->assertContains('list_action_viewcustomer.tpl', $html);
+        $this->assertTrue($module->smarty->disable);
         $html = $module->displayViewCustomerLink('token', 5);
-        $this->assertNotContains('disable', strtolower($html));
+        $this->assertContains('list_action_viewcustomer.tpl', $html);
+        $this->assertFalse($module->smarty->disable);
         $module->displayEnableLink('token', 7, 1, 'subscribed');
         $this->assertContains('token=token', $module->smarty->url_enable);
         $this->assertContains('=7', $module->smarty->url_enable);

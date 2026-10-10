@@ -14,7 +14,7 @@ while read -r hash name; do
   [ -z "$hash" ] && continue
   dest="$KEYS_DIR/$name"
   if [ ! -f "$dest" ]; then
-    "$DOCKER_BIN" run --rm --entrypoint /bin/sh "$PHP_IMAGE" \
+    "$DOCKER_BIN" run --rm --network none --entrypoint /bin/sh "$PHP_IMAGE" \
       -c "cat /etc/apk/keys/$name" >"$dest"
   fi
 done <"$KEYS_MANIFEST"
@@ -29,7 +29,7 @@ if ! ls "$CACHE_DIR"/*.apk >/dev/null 2>&1; then
   exit 1
 fi
 
-"$DOCKER_BIN" run --rm \
+"$DOCKER_BIN" run --rm --network none \
   -v "$CACHE_DIR:/apk-cache:ro" \
   -v "$KEYS_DIR:/etc/apk/keys:ro" \
   --entrypoint /bin/sh \
@@ -65,7 +65,7 @@ PY
 )"
 
 set +e
-"$DOCKER_BIN" run --rm \
+"$DOCKER_BIN" run --rm --network none \
   -v "$TAMPERED:/tmp/tampered.apk:ro" \
   -v "$KEYS_DIR:/etc/apk/keys:ro" \
   --entrypoint /bin/sh \

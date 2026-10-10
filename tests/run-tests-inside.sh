@@ -5,6 +5,21 @@ cd /work/tests
 
 EXPECTED_TESTS=66
 
+verify_phpunit_file_list() {
+  listed="$(grep '<file>' phpunit.xml | sed 's/.*<file>\([^<]*\)<\/file>.*/\1/' | sort)"
+  actual="$(find phpunit -name '*Test.php' -type f | sort)"
+  if [ "$listed" != "$actual" ]; then
+    echo "phpunit.xml file list drift" >&2
+    echo "listed:" >&2
+    echo "$listed" >&2
+    echo "actual:" >&2
+    echo "$actual" >&2
+    exit 1
+  fi
+}
+
+verify_phpunit_file_list
+
 install_offline_apks() {
   if [ ! -d /apk-cache ] || ! ls /apk-cache/*.apk >/dev/null 2>&1; then
     echo "Offline APK cache is missing; network apk fallback is disabled" >&2
@@ -39,7 +54,8 @@ PHP_BIN="$(command -v php)"
 export PHP_BINARY="$PHP_BIN"
 test "$("$PHP_BIN" -r 'echo PHP_VERSION;')" = "7.1.33"
 grep -q 'error_reporting(-1);' /work/tests/bootstrap.php
-grep -q 'error_reporting(-1);' /work/tests/scripts/ajax_subscription_probe.php
+grep -q 'probe_error_handler.php' /work/tests/scripts/ajax_subscription_probe.php
+grep -q 'probe_error_handler.php' /work/tests/scripts/ps_version_guard_probe.php
 
 RESULTS="/opt/cursor/artifacts/suite-results.md"
 mkdir -p /opt/cursor/artifacts

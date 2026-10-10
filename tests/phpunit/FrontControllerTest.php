@@ -46,13 +46,13 @@ class FrontControllerTest extends DatabaseTestCase
         $script = dirname(__DIR__) . '/scripts/ajax_subscription_probe.php';
         $php = getenv('PHP_BINARY') ?: 'php';
         $cmd = escapeshellarg($php) . ' ' . escapeshellarg($script);
-        $output = shell_exec($cmd . ' 2>&1');
-        $this->assertContains('AJAX_BEFORE', $output);
+        exec($cmd . ' 2>&1', $lines, $exitCode);
+        $output = implode("\n", $lines);
+        $this->assertSame(0, $exitCode);
+        $this->assertRegExp('/^AJAX_BEFORE\n\{/', $output);
         $this->assertNotContains('AJAX_UNEXPECTED', $output);
-        $jsonStart = strpos($output, '{');
-        $this->assertNotFalse($jsonStart);
-        $payload = json_decode(substr($output, $jsonStart), true);
+        $payload = json_decode(substr($output, strlen('AJAX_BEFORE') + 1), true);
         $this->assertTrue($payload['nw_error']);
-        $this->assertContains('§§', $payload['msg']);
+        $this->assertSentinel($payload['msg'], 'Invalid email address.', 'Shop.Notifications.Error');
     }
 }

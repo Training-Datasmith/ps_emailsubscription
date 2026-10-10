@@ -9,8 +9,8 @@ class PsVersionGuardTest extends DatabaseTestCase
         $command = escapeshellarg($php) . ' ' . escapeshellarg($script);
         exec($command, $output, $exitCode);
         $joined = implode("\n", $output);
-        $this->assertContains('GUARD_BEFORE', $joined);
-        $this->assertNotContains('GUARD_AFTER', $joined);
         $this->assertSame(0, $exitCode);
+        $this->assertSame('GUARD_BEFORE', $joined);
+        $this->assertNotContains('GUARD_AFTER', $joined);
     }
 }

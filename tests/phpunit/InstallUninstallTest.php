@@ -15,6 +15,10 @@ class InstallUninstallTest extends DatabaseTestCase
 
     public function testFreshInstallSeedsConfigurationAndSchema()
     {
+        Configuration::updateValue('NW_VERIFICATION_EMAIL', 1);
+        Configuration::updateValue('NW_CONFIRMATION_EMAIL', 1);
+        Configuration::updateValue('NW_VOUCHER_CODE', 'PREINSTALL');
+        Configuration::updateValue('NW_SALT', 'tooshort');
         $module = $this->newModule();
         $this->assertTrue($module->install());
 
@@ -29,7 +33,9 @@ class InstallUninstallTest extends DatabaseTestCase
         }
 
         $this->assertSame(16, strlen(Configuration::get('NW_SALT')));
+        $this->assertNotNull(Configuration::get('NW_VERIFICATION_EMAIL'));
         $this->assertSame(0, (int) Configuration::get('NW_VERIFICATION_EMAIL'));
+        $this->assertNotNull(Configuration::get('NW_CONFIRMATION_EMAIL'));
         $this->assertSame(0, (int) Configuration::get('NW_CONFIRMATION_EMAIL'));
         $this->assertSame('', Configuration::get('NW_VOUCHER_CODE'));
         $this->assertNotEmpty(Configuration::get('PS_NEWSLETTER_RAND'));

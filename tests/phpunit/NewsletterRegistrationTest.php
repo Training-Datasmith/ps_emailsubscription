@@ -145,9 +145,17 @@ class NewsletterRegistrationTest extends DatabaseTestCase
         $templates = array_column(Mail::$sent, 'template');
         $this->assertContains('newsletter_voucher', $templates);
         $this->assertContains('newsletter_conf', $templates);
-        $this->assertSame('WELCOME10', Mail::$sent[0]['vars']['{discount}']);
-        $this->assertSame(1, Mail::$sent[0]['idShop']);
-        $this->assertContains('/mails/', Mail::$sent[0]['templatePath']);
+        $voucherMail = null;
+        foreach (Mail::$sent as $mail) {
+            if ($mail['template'] === 'newsletter_voucher') {
+                $voucherMail = $mail;
+                break;
+            }
+        }
+        $this->assertNotNull($voucherMail);
+        $this->assertSame('WELCOME10', $voucherMail['vars']['{discount}']);
+        $this->assertSame(1, $voucherMail['idShop']);
+        $this->assertContains('/mails/', $voucherMail['templatePath']);
     }
 
     public function testUnsubscribeUnknownEmail()

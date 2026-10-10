@@ -1,11 +1,12 @@
 <?php
 
+require __DIR__ . '/probe_error_handler.php';
+
 putenv('DB_HOST=' . (getenv('DB_HOST') ?: '127.0.0.1'));
 putenv('DB_NAME=' . (getenv('DB_NAME') ?: 'prestashop_test'));
 putenv('DB_USER=' . (getenv('DB_USER') ?: 'root'));
 putenv('DB_PASSWORD=' . (getenv('DB_PASSWORD') ?: 'ps_emailsub_test'));
 
-error_reporting(-1);
 if (!defined('_PS_VERSION_')) {
     define('_PS_VERSION_', '8.1.0');
 }
@@ -26,7 +27,7 @@ require dirname(__DIR__, 2) . '/ps_emailsubscription.php';
 require dirname(__DIR__, 2) . '/controllers/front/subscription.php';
 require dirname(__DIR__) . '/support/TestableEmailsubscription.php';
 
-echo "AJAX_BEFORE\n";
+fwrite(STDERR, "AJAX_BEFORE\n");
 
 Validate::$emailResults['bad@example.com'] = false;
 $_POST = ['submitNewsletter' => '1', 'email' => 'bad@example.com', 'action' => '0'];
@@ -36,4 +37,4 @@ $controller = new Ps_EmailsubscriptionSubscriptionModuleFrontController();
 $controller->module = $module;
 $controller->ajax = true;
 $controller->postProcess();
-echo "AJAX_UNEXPECTED\n";
+fwrite(STDERR, "AJAX_UNEXPECTED\n");

@@ -82,7 +82,15 @@ class Module
 
     public function trans($id, array $parameters = [], $domain = null, $locale = null)
     {
-        return Translation::sentinel($id, $domain === null ? '' : $domain, $locale);
+        $message = $id;
+        foreach ($parameters as $key => $value) {
+            if ($key === '_raw') {
+                continue;
+            }
+            $message = str_replace($key, $value, $message);
+        }
+
+        return Translation::sentinel($message, $domain === null ? '' : $domain, $locale);
     }
 
     public function display($file, $template, $cache_id = null, $compile_id = null)
