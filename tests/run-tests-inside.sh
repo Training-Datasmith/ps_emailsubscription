@@ -94,9 +94,7 @@ fi
   echo "- repo: Training-Datasmith/ps_emailsubscription"
   echo "- date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "- branch: remote-test-2026-10-09"
-  if command -v git >/dev/null 2>&1 && [ -d /work/.git ]; then
-    echo "- commit: $(git -C /work rev-parse HEAD 2>/dev/null || echo unknown)"
-  fi
+  echo "- commit: ${COMMIT_SHA:-unknown}"
   echo "- php: 7.1.33"
   echo "- php image: php@sha256:2fbf149aa1e9ab4fda5e6a82261114543cc3c2419f46bb20d33cc01345ebd7c8"
   echo "- mariadb image: mariadb@sha256:3a7d3cbc8b6fddf66433d80dc124c1e4e75a73ebab9c6e137529cc270bdadfc0"

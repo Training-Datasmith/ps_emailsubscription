@@ -65,6 +65,8 @@ done
 
 "$DOCKER_BIN" exec "$DB_CONTAINER" mariadb-admin ping -uroot -pps_emailsub_test --silent
 
+COMMIT_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+
 "$DOCKER_BIN" run --rm --network "container:$DB_CONTAINER" \
   -v "$ROOT:/work" \
   -v /tmp/ps-emailsub-apk:/apk-cache:ro \
@@ -75,6 +77,7 @@ done
   -e DB_USER=root \
   -e DB_PASSWORD=ps_emailsub_test \
   -e DB_NAME=prestashop_test \
+  -e COMMIT_SHA="$COMMIT_SHA" \
   --entrypoint /bin/sh \
   "$PHP_IMAGE" \
   /work/tests/run-tests-inside.sh
