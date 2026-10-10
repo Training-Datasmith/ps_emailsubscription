@@ -5,7 +5,7 @@ putenv('DB_NAME=' . (getenv('DB_NAME') ?: 'prestashop_test'));
 putenv('DB_USER=' . (getenv('DB_USER') ?: 'root'));
 putenv('DB_PASSWORD=' . (getenv('DB_PASSWORD') ?: 'ps_emailsub_test'));
 
-error_reporting(E_ALL);
+error_reporting(-1);
 if (!defined('_PS_VERSION_')) {
     define('_PS_VERSION_', '8.1.0');
 }

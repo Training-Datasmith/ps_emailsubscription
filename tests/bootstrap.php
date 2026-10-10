@@ -1,6 +1,6 @@
 <?php
 
-error_reporting(E_ALL);
+error_reporting(-1);
 ini_set('display_errors', '1');
 
 set_error_handler(function ($severity, $message, $file, $line) {

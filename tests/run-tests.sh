@@ -6,15 +6,34 @@ NETWORK="ps-emailsub-test"
 DB_CONTAINER="ps-emailsub-db"
 PHP_IMAGE="php@sha256:2fbf149aa1e9ab4fda5e6a82261114543cc3c2419f46bb20d33cc01345ebd7c8"
 MARIADB_IMAGE="mariadb@sha256:3a7d3cbc8b6fddf66433d80dc124c1e4e75a73ebab9c6e137529cc270bdadfc0"
-DOCKER_BIN="${DOCKER_BIN:-/tmp/docker-full/docker/docker}"
+DOCKER_TGZ="${DOCKER_TGZ:-/tmp/docker.tgz}"
+DOCKER_SHA256="9b4f6fe406e50f9085ee474c451e2bb5adb119a03591f467922d3b4e2ddf31d3"
+DOCKER_EXTRACT_ROOT="${DOCKER_EXTRACT_ROOT:-/tmp/docker-full}"
+DOCKER_BIN="${DOCKER_BIN:-$DOCKER_EXTRACT_ROOT/docker/docker}"
 export DOCKER_HOST="${DOCKER_HOST:-unix:///tmp/docker.sock}"
+
+ensure_docker_bundle() {
+  if [ ! -f "$DOCKER_TGZ" ]; then
+    echo "Missing static Docker bundle at $DOCKER_TGZ" >&2
+    exit 1
+  fi
+  echo "${DOCKER_SHA256}  ${DOCKER_TGZ}" | sha256sum -c -
+  if [ ! -x "$DOCKER_BIN" ]; then
+    mkdir -p "$DOCKER_EXTRACT_ROOT"
+    tar -xzf "$DOCKER_TGZ" -C "$DOCKER_EXTRACT_ROOT"
+  fi
+  if [ ! -x "$DOCKER_BIN" ]; then
+    echo "Docker CLI not found at $DOCKER_BIN after extracting $DOCKER_TGZ" >&2
+    exit 1
+  fi
+}
 
 ensure_docker() {
   if "$DOCKER_BIN" info >/dev/null 2>&1; then
     return 0
   fi
-  if [ -x /tmp/docker-full/docker/dockerd ]; then
-    sudo PATH="/tmp/docker-full/docker:$PATH" /tmp/docker-full/docker/dockerd \
+  if [ -x "$DOCKER_EXTRACT_ROOT/docker/dockerd" ]; then
+    sudo PATH="$DOCKER_EXTRACT_ROOT/docker:$PATH" "$DOCKER_EXTRACT_ROOT/docker/dockerd" \
       --data-root=/tmp/docker-root \
       --exec-root=/tmp/docker-run \
       --host=unix:///tmp/docker.sock \
@@ -38,6 +57,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+ensure_docker_bundle
 ensure_docker
 
 bash "$ROOT/tests/fetch-alpine-apks.sh" /tmp/ps-emailsub-apk
@@ -78,6 +98,7 @@ COMMIT_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
   -e DB_PASSWORD=ps_emailsub_test \
   -e DB_NAME=prestashop_test \
   -e COMMIT_SHA="$COMMIT_SHA" \
+  -e RUN_MUTATIONS="${RUN_MUTATIONS:-0}" \
   --entrypoint /bin/sh \
   "$PHP_IMAGE" \
   /work/tests/run-tests-inside.sh

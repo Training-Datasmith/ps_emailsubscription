@@ -5,7 +5,16 @@
          stopOnFailure="false">
     <testsuites>
         <testsuite name="ps_emailsubscription">
-            <directory>phpunit</directory>
+            <file>phpunit/AccountAndGdprHooksTest.php</file>
+            <file>phpunit/AdminConfigAndExportTest.php</file>
+            <file>phpunit/ConfirmEmailTest.php</file>
+            <file>phpunit/FrontControllerTest.php</file>
+            <file>phpunit/InstallUninstallTest.php</file>
+            <file>phpunit/ModuleContractTest.php</file>
+            <file>phpunit/NewsletterRegistrationTest.php</file>
+            <file>phpunit/PsVersionGuardTest.php</file>
+            <file>phpunit/SubscribersAndWidgetTest.php</file>
+            <file>phpunit/UpgradeTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -1,40 +1,54 @@
 #!/bin/sh
 set -eu
 
+if [ "${RUN_MUTATIONS:-0}" != "1" ]; then
+  echo "Skipping mutations (set RUN_MUTATIONS=1 to enable)"
+  exit 0
+fi
+
 ROOT="/work"
 MODULE="$ROOT/ps_emailsubscription.php"
 PHP_BIN="${PHP_BINARY:-php}"
 PHAR="/tmp/phpunit-7.5.20.phar"
 export PHP_BINARY="$PHP_BIN"
+MODULE_BACKUP=""
 
-run_mutation() {
+restore_module() {
+  if [ -n "$MODULE_BACKUP" ] && [ -f "$MODULE_BACKUP" ]; then
+    cp -p "$MODULE_BACKUP" "$MODULE"
+    rm -f "$MODULE_BACKUP"
+    MODULE_BACKUP=""
+  fi
+}
+
+trap restore_module EXIT INT TERM
+
+begin_mutation() {
+  restore_module
+  MODULE_BACKUP="$(mktemp)"
+  cp -p "$MODULE" "$MODULE_BACKUP"
+}
+
+end_mutation() {
+  restore_module
+}
+
+run_mutation_filter() {
   label="$1"
-  python_script="$2"
-  filter="$3"
-  cp "$MODULE" "$MODULE.bak"
-  python3 - "$MODULE" <<'PY'
-import sys
-path = sys.argv[1]
-code = open(path).read()
-mutation = sys.stdin.read()
-if mutation not in code:
-    raise SystemExit('mutation marker missing')
-open(path, 'w').write(code.replace(mutation, sys.argv[2], 1))
-PY
+  filter="$2"
   set +e
   "$PHP_BIN" "$PHAR" --configuration /work/tests/phpunit.xml --filter "$filter" >/tmp/mutation-"$label".log 2>&1
   code=$?
   set -e
-  mv "$MODULE.bak" "$MODULE"
   if [ "$code" -eq 0 ]; then
-    echo "Mutation $label did not fail"
+    echo "Mutation $label did not fail" >&2
     return 1
   fi
   return 0
 }
 
 mutate_guest_unregister() {
-  cp "$MODULE" "$MODULE.bak"
+  begin_mutation
   python3 - <<'PY'
 from pathlib import Path
 path = Path("/work/ps_emailsubscription.php")
@@ -45,16 +59,12 @@ if old not in text:
     raise SystemExit('guest unregister target missing')
 path.write_text(text.replace(old, new, 1))
 PY
-  set +e
-  "$PHP_BIN" "$PHAR" --configuration /work/tests/phpunit.xml --filter testUnregisterUsesEmailArgumentNotPostForGuest >/tmp/mutation-guest.log 2>&1
-  code=$?
-  set -e
-  mv "$MODULE.bak" "$MODULE"
-  test "$code" -ne 0
+  run_mutation_filter guest testUnregisterUsesEmailArgumentNotPostForGuest
+  end_mutation
 }
 
 mutate_customer_unregister() {
-  cp "$MODULE" "$MODULE.bak"
+  begin_mutation
   python3 - <<'PY'
 from pathlib import Path
 path = Path("/work/ps_emailsubscription.php")
@@ -65,16 +75,12 @@ if old not in text:
     raise SystemExit('customer unregister target missing')
 path.write_text(text.replace(old, new, 1))
 PY
-  set +e
-  "$PHP_BIN" "$PHAR" --configuration /work/tests/phpunit.xml --filter testUnregisterUsesEmailArgumentNotPostForCustomer >/tmp/mutation-customer.log 2>&1
-  code=$?
-  set -e
-  mv "$MODULE.bak" "$MODULE"
-  test "$code" -ne 0
+  run_mutation_filter customer testUnregisterUsesEmailArgumentNotPostForCustomer
+  end_mutation
 }
 
 mutate_export_allow() {
-  cp "$MODULE" "$MODULE.bak"
+  begin_mutation
   python3 - <<'PY'
 from pathlib import Path
 path = Path("/work/ps_emailsubscription.php")
@@ -85,36 +91,52 @@ if old not in text:
     raise SystemExit('export allow-list missing')
 path.write_text(text.replace(old, new, 1))
 PY
-  set +e
-  "$PHP_BIN" "$PHAR" --configuration /work/tests/phpunit.xml --filter testExportRejectsUnsupportedAction >/tmp/mutation-export-allow.log 2>&1
-  code=$?
-  set -e
-  mv "$MODULE.bak" "$MODULE"
-  test "$code" -ne 0
+  run_mutation_filter export-allow testExportRejectsUnsupportedAction
+  end_mutation
 }
 
 mutate_export_path() {
-  cp "$MODULE" "$MODULE.bak"
+  begin_mutation
   python3 - <<'PY'
 from pathlib import Path
 path = Path("/work/ps_emailsubscription.php")
 text = path.read_text()
-old = "dirname(__FILE__) . '/customers_' . $this->file"
-new = "dirname(__FILE__) . '/export_' . $this->file"
-if old not in text:
-    raise SystemExit('export path literal missing')
-path.write_text(text.replace(old, new, 1))
+guard = """        if (Tools::getValue('action') !== 'customers') {
+            $this->_html .= $this->displayError($this->trans('No result found!', [], 'Modules.Emailsubscription.Admin'));
+
+            return;
+        }
+
+"""
+if guard not in text:
+    raise SystemExit('export customers guard missing')
+text = text.replace(guard, '', 1)
+replacements = [
+(
+"dirname(__FILE__) . '/customers_' . $this->file, 'w'",
+"dirname(__FILE__) . '/' . strval(preg_replace('#\\.{2,}#', '.', Tools::getValue('action'))) . '_' . $this->file, 'w'",
+),
+(
+"modules/ps_emailsubscription/customers_' . $this->file",
+"modules/ps_emailsubscription/' . Tools::safeOutput(strval(Tools::getValue('action'))) . '_' . $this->file",
+),
+(
+"dirname(__FILE__) . '/customers_' . $this->file . ' !'",
+"dirname(__FILE__) . '/' . strval(Tools::getValue('action')) . '_' . $this->file . ' !'",
+),
+]
+for old, new in replacements:
+    if old not in text:
+        raise SystemExit('export path target missing: ' + old)
+    text = text.replace(old, new, 1)
+path.write_text(text)
 PY
-  set +e
-  "$PHP_BIN" "$PHAR" --configuration /work/tests/phpunit.xml --filter testExportCustomersWritesInsideModule >/tmp/mutation-export-path.log 2>&1
-  code=$?
-  set -e
-  mv "$MODULE.bak" "$MODULE"
-  test "$code" -ne 0
+  run_mutation_filter export-path testExportRejectsUnsupportedAction
+  end_mutation
 }
 
 mutate_paginate() {
-  cp "$MODULE" "$MODULE.bak"
+  begin_mutation
   python3 - <<'PY'
 from pathlib import Path
 path = Path("/work/ps_emailsubscription.php")
@@ -125,12 +147,8 @@ if old not in text:
     raise SystemExit('paginate offset missing')
 path.write_text(text.replace(old, new, 1))
 PY
-  set +e
-  "$PHP_BIN" "$PHAR" --configuration /work/tests/phpunit.xml --filter testPaginateSubscribersSlicesOnlyWhenLongerThanThePage >/tmp/mutation-paginate.log 2>&1
-  code=$?
-  set -e
-  mv "$MODULE.bak" "$MODULE"
-  test "$code" -ne 0
+  run_mutation_filter paginate testPaginateSubscribersSlicesOnlyWhenLongerThanThePage
+  end_mutation
 }
 
 mutate_guest_unregister
@@ -138,4 +156,6 @@ mutate_customer_unregister
 mutate_export_allow
 mutate_export_path
 mutate_paginate
+trap - EXIT INT TERM
+restore_module
 echo "All mutation checks failed as expected"

@@ -111,3 +111,5 @@ for pkg in sorted(selected):
 
 print("selected", len(selected), "packages")
 PY
+
+bash "$(dirname "$0")/verify-apk-cache.sh" "$CACHE_DIR" "$MIRROR"
