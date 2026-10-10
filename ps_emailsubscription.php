@@ -596,9 +596,9 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
     protected function unregister($email, $register_status)
     {
         if ($register_status == self::GUEST_REGISTERED) {
-            $sql = 'DELETE FROM ' . _DB_PREFIX_ . 'emailsubscription WHERE `email` = \'' . pSQL($_POST['email']) . '\' AND id_shop = ' . $this->context->shop->id;
+            $sql = 'DELETE FROM ' . _DB_PREFIX_ . 'emailsubscription WHERE `email` = \'' . pSQL($email) . '\' AND id_shop = ' . $this->context->shop->id;
         } elseif ($register_status == self::CUSTOMER_REGISTERED) {
-            $sql = 'UPDATE ' . _DB_PREFIX_ . 'customer SET `newsletter` = 0 WHERE `email` = \'' . pSQL($_POST['email']) . '\' AND id_shop = ' . $this->context->shop->id;
+            $sql = 'UPDATE ' . _DB_PREFIX_ . 'customer SET `newsletter` = 0 WHERE `email` = \'' . pSQL($email) . '\' AND id_shop = ' . $this->context->shop->id;
         }
 
         if (!isset($sql) || !Db::getInstance()->execute($sql)) {
@@ -1303,6 +1303,12 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
             $this->context = Context::getContext();
         }
 
+        if (Tools::getValue('action') !== 'customers') {
+            $this->_html .= $this->displayError($this->trans('No result found!', [], 'Modules.Emailsubscription.Admin'));
+
+            return;
+        }
+
         $this->file = 'export_' . Configuration::get('PS_NEWSLETTER_RAND') . '.csv';
         // Getting data...
         $countries = Country::getCountries($this->context->language->id);
@@ -1317,7 +1323,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
         if ($result) {
             if (!$nb = count($result)) {
                 $this->_html .= $this->displayError($this->trans('No customers found with these filters!', [], 'Modules.Emailsubscription.Admin'));
-            } elseif ($fd = @fopen(dirname(__FILE__) . '/' . strval(preg_replace('#\.{2,}#', '.', Tools::getValue('action'))) . '_' . $this->file, 'w')) {
+            } elseif ($fd = @fopen(dirname(__FILE__) . '/customers_' . $this->file, 'w')) {
                 $header = ['id', 'shop_name', 'gender', 'lastname', 'firstname', 'email', 'subscribed', 'subscribed_on', 'iso_language'];
                 $array_to_export = array_merge([$header], $result);
 
@@ -1329,7 +1335,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
 
                 $this->_html .= $this->displayConfirmation(
                     sprintf($this->trans('The .CSV file has been successfully exported: %d customers found.', [], 'Modules.Emailsubscription.Admin'), $nb) . '<br />
-                <a href="' . $this->context->shop->getBaseURI() . 'modules/ps_emailsubscription/' . Tools::safeOutput(strval(Tools::getValue('action'))) . '_' . $this->file . '">
+                <a href="' . $this->context->shop->getBaseURI() . 'modules/ps_emailsubscription/customers_' . $this->file . '">
                 <b>' . $this->trans('Download the file', [], 'Modules.Emailsubscription.Admin') . ' ' . $this->file . '</b>
                 </a>
                 <br />
@@ -1339,7 +1345,7 @@ class Ps_Emailsubscription extends Module implements WidgetInterface
                     '</li>
                 </ol>');
             } else {
-                $this->_html .= $this->displayError($this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . dirname(__FILE__) . '/' . strval(Tools::getValue('action')) . '_' . $this->file . ' !');
+                $this->_html .= $this->displayError($this->trans('Error: Write access limited', [], 'Modules.Emailsubscription.Admin') . ' ' . dirname(__FILE__) . '/customers_' . $this->file . ' !');
             }
         } else {
             $this->_html .= $this->displayError($this->trans('No result found!', [], 'Modules.Emailsubscription.Admin'));
